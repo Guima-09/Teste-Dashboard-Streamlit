@@ -6,6 +6,7 @@ import glob
 from sentence_transformers import SentenceTransformer, util
 import config
 from utils_legislativo import limpar_ementa_para_vetorizacao, limpar_texto_basico, validar_tag
+from embeddings import get_model
 
 NOME_ARQUIVO_SAIDA = os.path.join(config.PASTA_CSV, "proposicoes_camara_resumo.csv")
 
@@ -144,7 +145,7 @@ def processar_lote(dados, pkl_data, query_embedding, termos_usuario, model, sufi
 if __name__ == "__main__":
     print(f"\n--- Filtragem Híbrida: '{config.CONSULTA_USUARIO}' ---")
     # Carrega modelo de embedding
-    model = SentenceTransformer(config.MODELO_NOME, device = config.dispositivo)
+    model = get_model()
     # Gera embedding da consulta do usuário
     query_embedding = model.encode(config.CONSULTA_USUARIO, convert_to_tensor=True)
     # Extrai termos longos da consulta para a checagem de Keywords

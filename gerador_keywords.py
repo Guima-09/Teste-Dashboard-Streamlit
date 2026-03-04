@@ -5,6 +5,7 @@ import glob
 import config
 from sentence_transformers import SentenceTransformer
 from utils_legislativo import validar_tag
+from embeddings import get_model
 
 MODELO_NOME = config.MODELO_NOME
 
@@ -40,7 +41,7 @@ def extrair_keywords(dados):
 
 if __name__ == "__main__":
     print(f"Carregando modelo de IA...")
-    try: model = SentenceTransformer(MODELO_NOME, device= config.dispositivo)
+    try: model = get_model()
     except: exit()
 
     # Busca os JSONs dentro da nova pasta
