@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 import streamlit as st
+import tempfile
 
 # --- MAPEAMENTO INTELIGENTE DE PASTAS ---
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -13,7 +14,6 @@ USUARIO = st.secrets["USUARIO"]
 SENHA = st.secrets["SENHA"]  # Coloque sua senha aqui
 NOME = st.secrets["NOME"]
 porta = st.secrets["PORTA"]
-certificado = tmp.path
 
 # 2. CONFIGURAÇÕES GERAIS DA IA
 dispositivo = "cpu"    #escolha entre cpu e gpu, para alternar entre processador e placa gráfica
