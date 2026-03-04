@@ -13,7 +13,7 @@ USUARIO = st.secrets["USUARIO"]
 SENHA = st.secrets["SENHA"]  # Coloque sua senha aqui
 NOME = st.secrets["NOME"]
 porta = st.secrets["PORTA"]
-certificado = st.secrets["CERTIFICADO"]
+certificado = tmp.path
 
 # 2. CONFIGURAÇÕES GERAIS DA IA
 dispositivo = "cpu"    #escolha entre cpu e gpu, para alternar entre processador e placa gráfica
@@ -30,3 +30,12 @@ PESO_SEMANTICO = 0.8
 PESO_KEYWORD = 0.2   
 FILTRO_THRESHOLD = 0.40
 THRESHOLD_SEMANTICO_MINIMO = 0.30
+
+import tempfile
+
+cert_content = st.secrets["CERTIFICADO"]
+
+with tempfile.NamedTemporaryFile(delete=False) as tmp:
+    tmp.write(cert_content.encode())
+    certificado = tmp.name
+    
