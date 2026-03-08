@@ -3,7 +3,6 @@ import os
 import mysql.connector
 import sys
 import config
-import dashboard
 import streamlit as st
 
 def pesquisar(pesquisa):

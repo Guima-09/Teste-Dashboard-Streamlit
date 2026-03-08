@@ -6,6 +6,6 @@ sentence-transformers
 pandas
 requests
 mysql-connector-python
-streamlit
+streamlit>=1.32.0
 plotly
 altair==4.2.2
