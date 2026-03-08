@@ -1,47 +1,35 @@
 import streamlit as st
 import pesquisa
-import traceback
+import dashboard
+import config
 
-# ==============================================
-# 1) CONFIGURAÇÃO BÁSICA DO APP
-# ==============================================
-st.set_page_config(
-    page_title="Dashboard OASIS",
-    layout="wide"
-)
-
+st.set_page_config(page_title="Dashboard OASIS", layout="wide")
 st.title("🏛️ Dashboard dos Projetos de Lei - IA OASIS")
-st.markdown("Visualização das proposições filtradas e classificadas pela Inteligência Artificial.")
 
 termo_pesquisa = st.text_input(label="Pesquisar Projeto de Lei")
 
-# Usamos o session_state para lembrar que uma pesquisa foi feita
-if 'pesquisa_realizada' not in st.session_state:
-    st.session_state.pesquisa_realizada = False
+# 1. Cria a trava de memória (começa como Falsa)
+if 'ia_concluida' not in st.session_state:
+    st.session_state.ia_concluida = False
 
+# 2. A GAIOLA DA IA: Tudo que é pesado fica preso neste botão
 if st.button('Pesquisar'):
-    # Muda o estado para avisar que temos resultados para mostrar
-    st.session_state.pesquisa_realizada = True
+    with st.spinner('A IA OASIS está processando os dados. Aguarde...'):
 
-# Se o botão foi clicado, roda a função (e mantém na tela!)
-if st.session_state.pesquisa_realizada and termo_pesquisa:
-    with st.spinner('A IA OASIS está analisando e buscando os dados no banco...'):
-        st.write("Iniciando a busca...")
+        with open( 'banco_de_dados_local/pesquisa.txt', 'w', encoding='utf-8') as arquivo:
+            arquivo.write(termo_pesquisa)
+            arquivo.close()
+
+        # Roda o processamento
+        pesquisa.pesquisar()
         
-        # O bloco try/except vai "caçar" onde o código está travando
-        try:
-            print(">>> Entrando na função pesquisa.pesquisar()...")
-            
-            # Chama a sua função original
-            pesquisa.pesquisar(termo_pesquisa)
-            
-            print(">>> Função finalizada com sucesso!")
-            st.success("Busca concluída!")
-            
-        except Exception as e:
-            # Se algo der errado lá dentro, ele para tudo e avisa aqui:
-            print(f"!!! DEU ERRO !!! -> {e}")
-            st.error("Ops! Aconteceu um erro interno na pesquisa.")
-            
-            # Isso vai imprimir o erro completo e a linha exata no seu dashboard
-            st.code(traceback.format_exc(), language='python')
+        # Destrava a memória avisando que a IA já terminou
+        st.session_state.ia_concluida = True
+
+# 3. A VITRINE: Só desenha se a IA já concluiu o trabalho
+if st.session_state.ia_concluida:
+    st.success("Busca finalizada! Os dados já estão disponíveis no painel.")
+    st.markdown("---")
+    
+    # Chama a função que desenha a tela (que você criou no dashboard.py)
+    dashboard.rodar_dashboard()

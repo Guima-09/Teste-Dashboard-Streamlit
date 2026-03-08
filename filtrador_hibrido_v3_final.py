@@ -5,8 +5,8 @@ import pickle
 import glob
 from sentence_transformers import SentenceTransformer, util
 import config
+import main
 from utils_legislativo import limpar_ementa_para_vetorizacao, limpar_texto_basico, validar_tag
-from embeddings import get_model, get_or_create_embeddings
 
 NOME_ARQUIVO_SAIDA = os.path.join(config.PASTA_CSV, "proposicoes_camara_resumo.csv")
 
@@ -22,15 +22,39 @@ def processar_lote(dados, pkl_data, query_embedding, termos_usuario, model, sufi
     5) Retornar apenas projetos que ultrapassem o threshold configurado.
     """
 
+    # Arquivo de cache dos embeddings das ementas e o JSON base dessa legislatura.
+    arquivo_cache = os.path.join(config.PASTA_DADOS, f"cache_ementas_{sufixo_leg}.pkl")
+    arquivo_json = os.path.join(config.PASTA_DADOS, f"camara_db_{sufixo_leg}.json")
+    
+    ementa_embeddings = None
+    
     # ----------------------------
-    # BLOCO 1 e 2 — EMBEDDINGS VIA MÓDULO EXTERNO
+    # BLOCO 1 — USO DE CACHE INTELIGENTE
     # ----------------------------
-    # Toda a lógica de cache, validação e geração foi delegada ao embeddings.py
-    ementa_embeddings = get_or_create_embeddings(
-        dados=dados,
-        sufixo_leg=sufixo_leg,
-        model=model
-    )
+    # Pega a data de modificação do JSON bruto para ver se tem projetos novos
+    json_mtime = os.path.getmtime(arquivo_json)
+
+    # Invalidação Inteligente: Só carrega o cache se ele for mais recente que o banco JSON
+    if os.path.exists(arquivo_cache):
+        pkl_mtime = os.path.getmtime(arquivo_cache)
+        # Se o cache é mais novo que o arquivo JSON, reaproveitamos os vetores
+        if pkl_mtime > json_mtime:
+            with open(arquivo_cache, 'rb') as f: cache_data = pickle.load(f)
+            # Segurança extra: Só reutiliza se o número de embeddings for igual ao número de projetos.
+            if len(cache_data) == len(dados): 
+                ementa_embeddings = cache_data
+
+    # ----------------------------
+    # BLOCO 2 — GERAÇÃO DE EMBEDDINGS (SE O CACHE ESTIVER INVÁLIDO)
+    # ----------------------------
+    if ementa_embeddings is None:
+        print(f"Gerando novos vetores de ementas para {sufixo_leg} (Base atualizada/Projetos novos)...")
+        # Limpa cada ementa antes de vetorização
+        ementas_limpas = [limpar_ementa_para_vetorizacao(p.get('ementa', '')) for p in dados]
+        # Gera embeddings em batch (mais eficiente)
+        ementa_embeddings = model.encode(ementas_limpas, batch_size=64, convert_to_tensor=True, show_progress_bar=True)
+        # Salva cache atualizado para execuções futuras
+        with open(arquivo_cache, 'wb') as f: pickle.dump(ementa_embeddings, f)
 
     # ----------------------------
     # BLOCO 3 — SIMILARIDADE SEMÂNTICA
@@ -119,13 +143,15 @@ def processar_lote(dados, pkl_data, query_embedding, termos_usuario, model, sufi
     return lote_resultados
 
 if __name__ == "__main__":
-    print(f"\n--- Filtragem Híbrida: '{config.CONSULTA_USUARIO}' ---")
+    with open( 'banco_de_dados_local/pesquisa.txt', 'r', encoding='utf-8') as arquivo:
+            CONSULTA_USUARIO = arquivo.read()
+    print(f"\n--- Filtragem Híbrida: '{CONSULTA_USUARIO}' ---")
     # Carrega modelo de embedding
-    model = get_model()
+    model = SentenceTransformer(config.MODELO_NOME, device = config.dispositivo)
     # Gera embedding da consulta do usuário
-    query_embedding = model.encode(config.CONSULTA_USUARIO, convert_to_tensor=True)
+    query_embedding = model.encode(CONSULTA_USUARIO, convert_to_tensor=True)
     # Extrai termos longos da consulta para a checagem de Keywords
-    termos_usuario = [t for t in limpar_texto_basico(config.CONSULTA_USUARIO).upper().split() if len(t) > 3]
+    termos_usuario = [t for t in limpar_texto_basico(CONSULTA_USUARIO).upper().split() if len(t) > 3]
 
     # Busca todos os arquivos JSON da base
     padrao_busca = os.path.join(config.PASTA_DADOS, "camara_db_leg*.json")

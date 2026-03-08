@@ -11,13 +11,16 @@ PASTA_CSV = os.path.join(BASE_DIR, "projetos_em_csv")
 # 1. CONFIGURAÇÕES MySQL
 HOST = st.secrets["HOST"]
 USUARIO = st.secrets["USUARIO"]
+CONSULTA_USUARIO = " "
 SENHA = st.secrets["SENHA"]  # Coloque sua senha aqui
 NOME = st.secrets["NOME"]
 porta = st.secrets["PORTA"]
 
+def consulta(termo):
+    global CONSULTA_USUARIO
+    CONSULTA_USUARIO = termo
 # 2. CONFIGURAÇÕES GERAIS DA IA
 dispositivo = "cpu"    #escolha entre cpu e gpu, para alternar entre processador e placa gráfica
-CONSULTA_USUARIO = "Regulamentação inteligência artificial"
 DATA_INICIO_COLETA = datetime(2015, 1, 1) 
 MODELO_NOME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 

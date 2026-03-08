@@ -6,8 +6,7 @@ import config
 import streamlit as st
 import dashboard
 
-def pesquisar(pesquisa):
-    config.CONSULTA_USUARIO = pesquisa
+def pesquisar():
     # --- CONFIGURAÇÃO GLOBAL DE CAMINHOS ---
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -127,7 +126,7 @@ def pesquisar(pesquisa):
         inserir_dados()
             
         # 4. Sobe a Interface Web
-        abrir_dashboard()
+        #abrir_dashboard()
             
     except Exception as e:
         print(f"Ocorreu um erro fatal na execução principal: {e}")
