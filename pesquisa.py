@@ -116,25 +116,25 @@ def pesquisar(pesquisa):
             else:
                 print(f"Pasta pronta: {pasta}")
 
-    if __name__ == "__main__":
-        try:
-            print(f"--- INICIANDO PROJETO OASIS COMPLETO ---")
-            print(f"Diretório base: {BASE_DIR}")
+    
+    try:
+        print(f"--- INICIANDO PROJETO OASIS COMPLETO ---")
+        print(f"Diretório base: {BASE_DIR}")
             
-            # 0. Garante que as pastas existam
-            garantir_estrutura_pastas()
+        # 0. Garante que as pastas existam
+        garantir_estrutura_pastas()
             
-            # 1. Coleta, Vetoriza e Filtra (Pipeline Híbrido)
-            executar_api()
+        # 1. Coleta, Vetoriza e Filtra (Pipeline Híbrido)
+        executar_api()
             
-            # 2. Reseta as Tabelas do Banco
-            recriar_banco()
+        # 2. Reseta as Tabelas do Banco
+        recriar_banco()
             
-            # 3. Insere o CSV Limpo no Banco
-            inserir_dados()
+        # 3. Insere o CSV Limpo no Banco
+        inserir_dados()
             
-            # 4. Sobe a Interface Web
-            abrir_dashboard()
+        # 4. Sobe a Interface Web
+        abrir_dashboard()
             
-        except Exception as e:
-            print(f"Ocorreu um erro fatal na execução principal: {e}")
+    except Exception as e:
+        print(f"Ocorreu um erro fatal na execução principal: {e}")
