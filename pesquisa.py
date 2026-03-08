@@ -3,6 +3,8 @@ import os
 import mysql.connector
 import sys
 import config
+import dashboard
+import streamlit as st
 
 def pesquisar(pesquisa):
     config.CONSULTA_USUARIO = pesquisa
@@ -89,21 +91,21 @@ def pesquisar(pesquisa):
             sys.exit(1)
 
     def abrir_dashboard():
-        print("\n>>> [4/4] Iniciando Dashboard (Streamlit)...")
-        print("---------------------------------------------------------")
-        print("O navegador deve abrir automaticamente.")
-        print("Para parar o servidor, pressione Ctrl+C neste terminal.")
+        print("\n>>> [4/4] Renderizando Dashboard na tela atual...")
         print("---------------------------------------------------------")
         
         dashboard_path = obter_caminho("dashboard.py")
         
-        # Garante que estamos usando 'python.exe' para ver os logs no Windows
-        executavel_python = sys.executable.replace("pythonw.exe", "python.exe")
-        
         try:
-            subprocess.run([executavel_python, "-m", "streamlit", "run", dashboard_path], check=True, cwd=BASE_DIR)
-        except KeyboardInterrupt:
-            print("\nServidor do Dashboard encerrado pelo usuário.")
+            # Lê todo o texto do seu arquivo dashboard.py original
+            with open(dashboard_path, "r", encoding="utf-8") as arquivo:
+                codigo_dashboard = arquivo.read()
+            
+            # O exec() roda o código lido como se ele tivesse sido colado aqui.
+            exec(codigo_dashboard, globals())
+            
+        except Exception as e:
+            st.error(f"Erro ao tentar abrir o dashboard na nuvem: {e}")
 
     def garantir_estrutura_pastas():
         print("\n>>> [0/4] Verificando estrutura de pastas...")
