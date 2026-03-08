@@ -12,13 +12,13 @@ import os
 # ==============================================
 # 1) CONFIGURAÇÃO BÁSICA DO APP
 # ==============================================
-st.set_page_config(
-    page_title="Dashboard OASIS",
-    layout="wide"
-)
+#st.set_page_config(
+#    page_title="Dashboard OASIS",
+#    layout="wide"
+#)
 
-st.title("🏛️ Dashboard dos Projetos de Lei - IA OASIS")
-st.markdown("Visualização das proposições filtradas e classificadas pela Inteligência Artificial.")
+#st.title("🏛️ Dashboard dos Projetos de Lei - IA OASIS")
+#st.markdown("Visualização das proposições filtradas e classificadas pela Inteligência Artificial.")
 
 # ==============================================
 # 2) CONEXÃO E FUNÇÕES AUXILIARES
