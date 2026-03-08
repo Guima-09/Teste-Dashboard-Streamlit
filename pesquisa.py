@@ -4,6 +4,7 @@ import mysql.connector
 import sys
 import config
 import streamlit as st
+import dashboard
 
 def pesquisar(pesquisa):
     config.CONSULTA_USUARIO = pesquisa
@@ -92,17 +93,8 @@ def pesquisar(pesquisa):
     def abrir_dashboard():
         print("\n>>> [4/4] Renderizando Dashboard na tela atual...")
         print("---------------------------------------------------------")
-        
-        dashboard_path = obter_caminho("dashboard.py")
-        
         try:
-            # Lê todo o texto do seu arquivo dashboard.py original
-            with open(dashboard_path, "r", encoding="utf-8") as arquivo:
-                codigo_dashboard = arquivo.read()
-            
-            # O exec() roda o código lido como se ele tivesse sido colado aqui.
-            exec(codigo_dashboard, globals())
-            
+            dashboard.rodar_dashboard()
         except Exception as e:
             st.error(f"Erro ao tentar abrir o dashboard na nuvem: {e}")
 
