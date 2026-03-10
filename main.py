@@ -15,10 +15,15 @@ if 'ia_concluida' not in st.session_state:
 # 2. A GAIOLA DA IA: Tudo que é pesado fica preso neste botão
 if st.button('Pesquisar'):
     with st.spinner('A IA OASIS está processando os dados. Aguarde...'):
-
+        
         with open( 'banco_de_dados_local/pesquisa.txt', 'w', encoding='utf-8') as arquivo:
-            arquivo.write(termo_pesquisa)
-            arquivo.close()
+            if termo_pesquisa != (None or " ") and termo_pesquisa != arquivo.read:
+                 arquivo.write(termo_pesquisa)
+                 arquivo.close()
+                 st.cache_data.clear()
+            else:
+                arquivo.write(termo_pesquisa)
+                arquivo.close()
 
         # Roda o processamento
         pesquisa.pesquisar()

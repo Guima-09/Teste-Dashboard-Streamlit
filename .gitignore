@@ -1,4 +1,5 @@
 .streamlit
+venv
 __pycache__/
 *.pyc
 ca.pem
