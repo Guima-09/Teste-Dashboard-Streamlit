@@ -5,13 +5,11 @@ import pickle
 import glob
 from sentence_transformers import SentenceTransformer, util
 import config
-import main
 from utils_legislativo import limpar_ementa_para_vetorizacao, limpar_texto_basico, validar_tag
-from embeddings import get_model, get_or_create_embeddings
 
 NOME_ARQUIVO_SAIDA = os.path.join(config.PASTA_CSV, "proposicoes_camara_resumo.csv")
 
-def processar_lote(dados, pkl_data, query_embedding, termos_usuario, model, sufixo_leg):
+def processar_lote(dados, pkl_data, query_embedding, query_embedding_secundaria, termos_usuario, model, sufixo_leg):
     """
     Processa um lote correspondente a UMA legislatura específica.
 
@@ -22,29 +20,70 @@ def processar_lote(dados, pkl_data, query_embedding, termos_usuario, model, sufi
     4) Calcular score final ponderado.
     5) Retornar apenas projetos que ultrapassem o threshold configurado.
     """
+
+    # Arquivo de cache dos embeddings das ementas e o JSON base dessa legislatura.
+    arquivo_cache = os.path.join(config.PASTA_DADOS, f"cache_ementas_{sufixo_leg}.pkl")
+    arquivo_json = os.path.join(config.PASTA_DADOS, f"camara_db_{sufixo_leg}.json")
+    
+    ementa_embeddings = None
     
     # ----------------------------
-    # BLOCO 1 e 2 — EMBEDDINGS VIA MÓDULO EXTERNO
+    # BLOCO 1 — USO DE CACHE INTELIGENTE
     # ----------------------------
-    # Toda a lógica de cache, validação e geração foi delegada ao embeddings.py
-    ementa_embeddings = get_or_create_embeddings(
-        dados=dados,
-        sufixo_leg=sufixo_leg,
-        model=model
-    )
+    # Pega a data de modificação do JSON bruto para ver se tem projetos novos
+    json_mtime = os.path.getmtime(arquivo_json)
+
+    # Invalidação Inteligente: Só carrega o cache se ele for mais recente que o banco JSON
+    if os.path.exists(arquivo_cache):
+        pkl_mtime = os.path.getmtime(arquivo_cache)
+        # Se o cache é mais novo que o arquivo JSON, reaproveitamos os vetores
+        if pkl_mtime > json_mtime:
+            with open(arquivo_cache, 'rb') as f: cache_data = pickle.load(f)
+            # Segurança extra: Só reutiliza se o número de embeddings for igual ao número de projetos.
+            if len(cache_data) == len(dados): 
+                ementa_embeddings = cache_data
+
+    # ----------------------------
+    # BLOCO 2 — GERAÇÃO DE EMBEDDINGS (SE O CACHE ESTIVER INVÁLIDO)
+    # ----------------------------
+    if ementa_embeddings is None:
+        print(f"Gerando novos vetores de ementas para {sufixo_leg} (Base atualizada/Projetos novos)...")
+        # Limpa cada ementa antes de vetorização
+        ementas_limpas = [limpar_ementa_para_vetorizacao(p.get('ementa', '')) for p in dados]
+        # Gera embeddings em batch (mais eficiente)
+        ementa_embeddings = model.encode(ementas_limpas, batch_size=64, convert_to_tensor=True, show_progress_bar=True)
+        # Salva cache atualizado para execuções futuras
+        with open(arquivo_cache, 'wb') as f: pickle.dump(ementa_embeddings, f)
 
     # ----------------------------
     # BLOCO 3 — SIMILARIDADE SEMÂNTICA
     # ----------------------------
     # Calcula similaridade de cosseno entre query_embedding e todos os embeddings das ementas
-    cos_scores = util.cos_sim(query_embedding, ementa_embeddings)[0]
+    # 1. Afinidade com o tema principal
+    cos_scores_principal = util.cos_sim(query_embedding, ementa_embeddings)[0]
+    # 2. Afinidade com o tema da query secundaria
+    if (query_embedding_secundaria) is not None:
+        cos_scores_secundaria = util.cos_sim(query_embedding_secundaria, ementa_embeddings)[0]
+    else:
+        # Se não tem query secundária, ela apenas "espelha" a query principal sem reprocessar
+        cos_scores_secundaria = cos_scores_principal
+
     lote_resultados = []
 
     # Itera sobre cada proposição
-    for idx, score_tensor in enumerate(cos_scores):
-        score_sem = float(score_tensor)
+    for idx, score_tensor in enumerate(cos_scores_principal):
+        score_sem_principal = float(score_tensor)
+        score_sem_secundaria = float(cos_scores_secundaria[idx]) # Devido ao espelhamento, podemos ter score_sem_secundaria == score_sem_principal, caso query secundaria seja nula
+
+        # REGRA DE CORTE DUPLA:
         # Se não atingir mínimo semântico, ignora imediatamente.
-        if score_sem < config.THRESHOLD_SEMANTICO_MINIMO: continue
+        if score_sem_principal < config.THRESHOLD_SEMANTICO_MINIMO:
+            continue
+        if query_embedding_secundaria is not None and score_sem_secundaria < config.THRESHOLD_SEMANTICO_MINIMO_SECUNDARIA:
+            continue
+
+        # MÉDIA PONDERADA (Ex: 70% de peso ao tema principal e 30% ao secundário)
+        score_sem_combinado = ((score_sem_principal * config.PESO_QUERY_PRINCIPAL) + (score_sem_secundaria * config.PESO_QUERY_SECUNDARIA))
 
         p = dados[idx]
 
@@ -83,7 +122,7 @@ def processar_lote(dados, pkl_data, query_embedding, termos_usuario, model, sufi
         # ----------------------------
         # BLOCO 5 — SCORE HÍBRIDO
         # ----------------------------
-        final = (score_sem * config.PESO_SEMANTICO) + (score_kw * config.PESO_KEYWORD)
+        final = (score_sem_combinado * config.PESO_SEMANTICO) + (score_kw * config.PESO_KEYWORD)
         
         if final >= config.FILTRO_THRESHOLD:
             # ----------------------------
@@ -113,62 +152,69 @@ def processar_lote(dados, pkl_data, query_embedding, termos_usuario, model, sufi
                 "Situação": meta['situacao'],
                 "Score Final": f"{final:.4f}",
                 "Boost Keyword": boost_ativo,
-                "Similaridade Semantica": f"{score_sem:.4f}",
+                "Similaridade Semantica": f"{score_sem_combinado:.4f}",
                 # Campo interno para ordenação
                 "raw_score": final
             })
     return lote_resultados
 
-if __name__ == "__main__":
-    with open( 'banco_de_dados_local/pesquisa.txt', 'r', encoding='utf-8') as arquivo:
-            CONSULTA_USUARIO = arquivo.read()
-    print(f"\n--- Filtragem Híbrida: '{CONSULTA_USUARIO}' ---")
-    # Carrega modelo de embedding
-    model = SentenceTransformer(config.MODELO_NOME, device = config.dispositivo)
-    # Gera embedding da consulta do usuário
-    query_embedding = model.encode(CONSULTA_USUARIO, convert_to_tensor=True)
-    # Extrai termos longos da consulta para a checagem de Keywords
-    termos_usuario = [t for t in limpar_texto_basico(CONSULTA_USUARIO).upper().split() if len(t) > 3]
+# ==========================================
+# FUNÇÃO PRINCIPAL CHAMADA PELO DASHBOARD
+# ==========================================
+def executar_filtragem(consulta_usuario, consulta_secundaria, model):
+    """
+    Recebe o tema digitado pelo usuário no Streamlit e o modelo de IA já carregado na memória RAM.
+    Filtra os 50.000 projetos e gera o CSV atualizado em poucos segundos.
+    """
+    print(f"\n--- Iniciando Filtragem Híbrida Dinâmica: '{consulta_usuario}' ---")
+    
+    # 1. Gera o vetor matemático da nova pergunta do usuário na hora
+    query_embedding = model.encode(consulta_usuario, convert_to_tensor=True)
 
-    # Busca todos os arquivos JSON da base
+    consulta_secundaria_valida = consulta_secundaria and consulta_secundaria.strip()
+    query_embedding_secundaria = model.encode(consulta_secundaria, convert_to_tensor=True) if consulta_secundaria_valida else None
+
+    # 2. Extrai os termos puros da pergunta para o sistema de bônus por palavras-chave (Boost)
+    consulta_integral = f"{consulta_usuario} {consulta_secundaria}"
+    termos_usuario = [t for t in limpar_texto_basico(consulta_integral).upper().split() if len(t) > 3]
+
     padrao_busca = os.path.join(config.PASTA_DADOS, "camara_db_leg*.json")
     arquivos_db = glob.glob(padrao_busca)
     todos_resultados = []
 
-    # Processa cada legislatura separadamente (Evita estourar a memória RAM)
+    # 3. Varre as legislaturas cruzando a nova pergunta com os vetores já salvos
     for arquivo in arquivos_db:
         nome_base = os.path.basename(arquivo)
         sufixo_leg = nome_base.replace("camara_db_", "").replace(".json", "")
         arquivo_pkl = os.path.join(config.PASTA_DADOS, f"keywords_embeddings_{sufixo_leg}.pkl")
         
         if os.path.exists(arquivo_pkl):
-            print(f"\nAnalisando lote: {sufixo_leg}")
             with open(arquivo, 'r', encoding='utf-8') as f: dados = json.load(f)
             with open(arquivo_pkl, 'rb') as f: pkl = pickle.load(f)
             
-            resultados_lote = processar_lote(dados, pkl, query_embedding, termos_usuario, model, sufixo_leg)
+            # Chama a função processar_lote (que já existe no seu arquivo e continua igual)
+            resultados_lote = processar_lote(dados, pkl, query_embedding, query_embedding_secundaria, termos_usuario, model, sufixo_leg)
             todos_resultados.extend(resultados_lote)
-            # Liberação explícita de memória
             del dados, pkl, resultados_lote
 
-    # Ordena por score real (não o string formatado), do maior para o menor
+    # 4. Ordena os vencedores pela nota bruta da IA
     todos_resultados = sorted(todos_resultados, key=lambda x: x['raw_score'], reverse=True)
 
-    # Define colunas do CSV
     colunas = [
         "Norma", "Descricao da Sigla", "Data de Apresentacao", "Autor", "Partido", "Ementa", 
         "Link Documento PDF", "Link Página Web", "Indexacao", "Último Estado", "Data Último Estado", 
         "Situação", "Score Final", "Boost Keyword", "Similaridade Semantica"
     ]
 
-    # Garante que a pasta de destino exista
     pasta_destino = os.path.dirname(NOME_ARQUIVO_SAIDA)
     if pasta_destino and not os.path.exists(pasta_destino): os.makedirs(pasta_destino)
 
-    # Escrita final do CSV, pronto para ser lido pelo banco SQL
+    # 5. Sobrescreve o arquivo CSV antigo com os novos resultados
     with open(NOME_ARQUIVO_SAIDA, 'w', newline='', encoding='utf-8-sig') as f:
         writer = csv.DictWriter(f, fieldnames=colunas, extrasaction='ignore', delimiter=';')
         writer.writeheader()
         writer.writerows(todos_resultados)
     
-    print(f"\n[SUCESSO] Total de resultados finais: {len(todos_resultados)}")
+    print(f"[SUCESSO] Filtragem concluída. {len(todos_resultados)} projetos encontrados para o novo tema.")
+
+# Remova o bloco antigo "if __name__ == '__main__':" que ficava aqui!
