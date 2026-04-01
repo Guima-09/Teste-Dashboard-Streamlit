@@ -17,8 +17,7 @@ NOME = st.secrets["NOME"]
 porta = st.secrets["PORTA"]
 
 # 2. CONFIGURAÇÕES GERAIS DA IA E HARDWARE
-CONSULTA_USUARIO = "Regulamentação inteligência artificial"
-CONSULTA_SECUNDARIA = "Educação e ensino"
+
 DATA_INICIO_COLETA = datetime(2015, 1, 1) 
 MODELO_NOME = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
