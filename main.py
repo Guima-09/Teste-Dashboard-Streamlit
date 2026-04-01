@@ -35,7 +35,6 @@ if st.button("Filtrar", type="primary"):
     st.write(f"Buscando por: **{tema_pesquisa_principal}** com o filtro **{tema_pesquisa_secundaria}**")
     
     with st.spinner("Vetorizando pesquisa e analisando o histórico..."):
-        time.sleep(1)
         # Escrita dos arquivos
         with open('banco_de_dados_local/pesquisa1.txt', 'w', encoding='utf-8') as f:
             f.write(tema_pesquisa_principal)
