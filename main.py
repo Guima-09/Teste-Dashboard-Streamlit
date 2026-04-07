@@ -2,6 +2,7 @@ import streamlit as st
 import pesquisa
 import dashboard
 import subprocess
+import sys
 
 st.set_page_config(page_title="Dashboard OASIS", layout="wide")
 st.title("🏛️ Dashboard dos Projetos de Lei - IA OASIS")
@@ -74,9 +75,15 @@ with tab_pesquisa:
 with tab_bd:
     st.subheader(":red[AVISO: Este Botão serve para atualizar a base de dados com os projetos mais recentes. ESSA EXECUÇÂO DEMORA EM MEDIA 1 HORA, cuidado ao prosseguir.]")
     if st.button("Atualizar", type="primary"):
-        with st.spinner("Vetorizando pesquisa e analisando o histórico..."):
-            subprocess.run(["python", "embeddings.py"])
-        st.success("Processo finalizado com sucesso!")
+        with st.spinner("Vetorizando pesquisa..."):
+            # sys.executable garante que você use o mesmo Python que está rodando o Streamlit
+            resultado = subprocess.run([sys.executable, "embeddings.py"], capture_output=True, text=True)
+            
+            if resultado.returncode == 0:
+                st.success("Processo finalizado com sucesso!")
+            else:
+                st.error("Erro ao executar o script:")
+                st.code(resultado.stderr) # Mostra o erro real que aconteceu
 
 
     
