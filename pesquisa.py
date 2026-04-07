@@ -4,7 +4,6 @@ import mysql.connector
 import sys
 import config
 import streamlit as st
-import dashboard
 
 def pesquisar():
     # --- CONFIGURAÇÃO GLOBAL DE CAMINHOS ---
