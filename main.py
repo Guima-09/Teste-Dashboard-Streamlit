@@ -1,6 +1,7 @@
 import streamlit as st
 import pesquisa
 import dashboard
+import subprocess
 
 st.set_page_config(page_title="Dashboard OASIS", layout="wide")
 st.title("🏛️ Dashboard dos Projetos de Lei - IA OASIS")
@@ -9,6 +10,8 @@ tab_pesquisa, tab_bd= st.tabs([
     "📊 Pesquisa", 
      "📄 Atualizar Base de Dados (BETA)", 
 ])
+
+atualizar = False
 
 with tab_pesquisa:
     # Inicia o estado se não existir
@@ -36,25 +39,28 @@ with tab_pesquisa:
         )
 
     if st.button("Filtrar", type="primary"):
-        # O st.write agora aparecerá e permanecerá enquanto o spinner rodar
-        st.write(f"Buscando por: **{tema_pesquisa_principal}** com o filtro **{tema_pesquisa_secundaria}**")
-        
-        with st.spinner("Vetorizando pesquisa e analisando o histórico..."):
-            # Escrita dos arquivos
-            with open('banco_de_dados_local/pesquisa1.txt', 'w', encoding='utf-8') as f:
-                f.write(tema_pesquisa_principal)
+        if (atualizar == False):
+            # O st.write agora aparecerá e permanecerá enquanto o spinner rodar
+            st.write(f"Buscando por: **{tema_pesquisa_principal}** com o filtro **{tema_pesquisa_secundaria}**")
             
-            with open('banco_de_dados_local/pesquisa2.txt', 'w', encoding='utf-8') as f:
-                f.write(tema_pesquisa_secundaria)
+            with st.spinner("Vetorizando pesquisa e analisando o histórico..."):
+                # Escrita dos arquivos
+                with open('banco_de_dados_local/pesquisa1.txt', 'w', encoding='utf-8') as f:
+                    f.write(tema_pesquisa_principal)
+                
+                with open('banco_de_dados_local/pesquisa2.txt', 'w', encoding='utf-8') as f:
+                    f.write(tema_pesquisa_secundaria)
 
-            # Limpa o cache antes de pesquisar para garantir dados novos
-            st.cache_data.clear()
-            
-            # Roda o processamento
-            pesquisa.pesquisar()
+                # Limpa o cache antes de pesquisar para garantir dados novos
+                st.cache_data.clear()
+                
+                # Roda o processamento
+                pesquisa.pesquisar()
 
-            # Marca como concluído
-            st.session_state.ia_concluida = True
+                # Marca como concluído
+                st.session_state.ia_concluida = True
+        else:
+            st.warning("Atualização de dados iniciada! Atualize a base de dados primeiro!")
         
     st.markdown("---")
 
@@ -66,10 +72,11 @@ with tab_pesquisa:
         dashboard.rodar_dashboard()
 
 with tab_bd:
-    st.write("AVISO: Este Botão serve para atualizar a base de dados com os projetos mais recentes. ESSA EXECUÇÂO DEMORA EM MEDIA 1 HORA, cuidado ao prosseguir.")
+    st.subheader(":red[AVISO: Este Botão serve para atualizar a base de dados com os projetos mais recentes. ESSA EXECUÇÂO DEMORA EM MEDIA 1 HORA, cuidado ao prosseguir.]")
     if st.button("Atualizar", type="primary"):
-        st.write("Teste")
-
+        with st.spinner("Vetorizando pesquisa e analisando o histórico..."):
+            subprocess.run(["python", "embeddings.py"])
+        st.success("Processo finalizado com sucesso!")
 
 
     

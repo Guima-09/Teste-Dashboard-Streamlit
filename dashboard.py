@@ -109,7 +109,6 @@ def rodar_dashboard():
     # 2. Manda o insert_data apagar a tabela velha e salvar a nova
     motor_banco.atualizar_banco_sql()
             
-
     # ==============================================
     # 5) SIDEBAR — FILTROS DO PAINEL
     # ==============================================
