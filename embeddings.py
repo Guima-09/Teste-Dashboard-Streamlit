@@ -91,6 +91,16 @@ def gerar_embeddings_para_legislatura(model, arquivo_json, pbar=None, status_tex
     return total_propostas
 
 # ==========================================================
+# FUNÇÃO DE COMPATIBILIDADE (Para evitar erro no Filtrador)
+# ==========================================================
+def get_or_create_embeddings(dados, sufixo_leg, model):
+    """
+    Mantém a compatibilidade com scripts que ainda usam o nome antigo.
+    """
+    # Esta função chama a nossa nova lógica, mas sem a barra de progresso do Streamlit
+    return gerar_embeddings_para_legislatura(model, f"camara_db_{sufixo_leg}.json")
+
+# ==========================================================
 # 3. Lógica Main (Execução via Terminal)
 # ==========================================================
 def main():
