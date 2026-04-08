@@ -57,7 +57,7 @@ with tab_pesquisa:
 
 with tab_bd:
     st.subheader(":red[AVISO: Atualização da base de dados com projetos recentes.]")
-    st.info("Duração estimada: ~1 hora. Mantenha esta aba aberta para acompanhar o progresso.")
+    st.info("Duração estimada: ~20 minutos. Mantenha esta aba aberta para acompanhar o progresso.")
     
     # Botão que desabilita a si mesmo enquanto roda
     if st.button("Iniciar Atualização", type="primary", disabled=st.session_state.atualizando_db):
@@ -69,9 +69,9 @@ with tab_bd:
         
         try:
             # --- ETAPA 1: COLETA (API -> JSON) ---
-            status_info.warning("📡 Conectando à API da Câmara... Buscando novas proposições.")
-            # Nota: Como o coletor usa prints, eles aparecerão apenas no console do Streamlit Cloud.
-            coletor_camara2.executar_coleta_incremental()
+            with st.spinner("📡 Conectando à API da Câmara... Buscando novas proposições."):
+                # Nota: Como o coletor usa prints, eles aparecerão apenas no console do Streamlit Cloud.
+                coletor_camara2.executar_coleta_incremental()
             
             # --- ETAPA 2: VETORIZAÇÃO (JSON -> PKL) ---
             status_info.info("⏳ Inicializando modelo de IA (carregando tensores)...")
