@@ -34,7 +34,7 @@ def obter_lista_ids(base_url, data_inicio_global, data_fim_global, tipos):
     """
     Objetivo: Buscar TODOS os IDs de proposições no intervalo de datas especificado.
     """
-    print(f"A procurar IDs (Período: {data_inicio_global.strftime('%d/%m/%Y')} até {data_fim_global.strftime('%d/%m/%Y')})...")
+    print(f"A procurar IDs (Período: {data_inicio_global.strftime('%d/%m/%Y')} até {data_fim_global.strftime('%d/%m/%Y')})...", flush=True)
     
     ids_encontrados = set()
     session = requests.Session()
@@ -43,7 +43,7 @@ def obter_lista_ids(base_url, data_inicio_global, data_fim_global, tipos):
 
     while data_atual <= data_fim_global:
         data_proxima = min(data_atual + passo_dias, data_fim_global)
-        print(f"-> A varrer período: {data_atual.strftime('%Y-%m-%d')} até {data_proxima.strftime('%Y-%m-%d')}")
+        print(f"-> A varrer período: {data_atual.strftime('%Y-%m-%d')} até {data_proxima.strftime('%Y-%m-%d')}", flush = True)
         
         url = f"{base_url}/proposicoes"
         params = {
@@ -128,7 +128,7 @@ def obter_detalhes_e_separar(lista_ids):
     """
     FUNÇÃO PRINCIPAL DE EXTRAÇÃO E PARTICIONAMENTO.
     """
-    print(f"\nExtração MULTITHREAD de {len(lista_ids)} projetos...")
+    print(f"\nExtração MULTITHREAD de {len(lista_ids)} projetos...", flush = True)
 
     cache_autores = {}
     if os.path.exists(ARQUIVO_CACHE_PARTIDOS):
@@ -151,7 +151,7 @@ def obter_detalhes_e_separar(lista_ids):
             if processados % 100 == 0 or processados == total:
                 vel = processados / (time.time() - start_time)
                 eta = (total - processados) / vel / 60 if vel > 0 else 0
-                print(f"[{processados}/{total}] Vel: {vel:.1f} p/s | ETA: {eta:.1f} min")
+                print(f"[{processados}/{total}] Vel: {vel:.1f} p/s | ETA: {eta:.1f} min", flush = True)
 
     with open(ARQUIVO_CACHE_PARTIDOS, 'w', encoding='utf-8') as f: json.dump(cache_autores, f, ensure_ascii=False)
     return bancos_separados
@@ -174,11 +174,11 @@ def executar_coleta_incremental():
             if "ultima_coleta" in meta:
                 ultima_data = datetime.strptime(meta["ultima_coleta"], "%Y-%m-%d")
                 data_inicio_busca = ultima_data
-                print(f"\n[CACHE] Sincronização Incremental: Buscando dados novos desde {ultima_data.strftime('%d/%m/%Y')}.")
+                print(f"\n[CACHE] Sincronização Incremental: Buscando dados novos desde {ultima_data.strftime('%d/%m/%Y')}.", flush = True)
     else:
         print(f"\n[CACHE] Primeira execução. Coleta completa a partir de {data_inicio_busca.strftime('%d/%m/%Y')}.")
 
-    ids = obter_lista_ids(CAMARA_BASE_URL, data_inicio_busca, hoje, TIPOS_DOCUMENTO)
+    ids = obter_lista_ids(CAMARA_BASE_URL, data_inicio_busca, hoje, TIPOS_DOCUMENTO, flush = True)
     
     if ids: 
         novos_dados_separados = obter_detalhes_e_separar(ids)
@@ -202,7 +202,7 @@ def executar_coleta_incremental():
             else:
                 print(f"-> Nenhum projeto novo para {leg}.")
     else:
-        print("-> Nenhum projeto novo encontrado no período.")
+        print("-> Nenhum projeto novo encontrado no período.", flush = True)
 
     with open(ARQUIVO_METADADOS, 'w', encoding='utf-8') as f:
         json.dump({"ultima_coleta": hoje.strftime("%Y-%m-%d")}, f)

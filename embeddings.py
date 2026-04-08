@@ -87,7 +87,7 @@ def gerar_embeddings_para_legislatura(model, arquivo_json, pbar=None, status_tex
     with open(caminho_saida, 'wb') as f:
         pickle.dump(embeddings_final, f)
 
-    print(f"✔ Embeddings salvos com sucesso em: {caminho_saida}")
+    print(f"✔ Embeddings salvos com sucesso em: {caminho_saida}", flush = True)
     return total_propostas
 
 # ==========================================================
@@ -107,7 +107,7 @@ def main():
     """
     Execução padrão quando o script é chamado diretamente (ex: python embeddings.py).
     """
-    print("=== INICIANDO PROCESSAMENTO DE EMBEDDINGS (MODO OFFLINE) ===")
+    print("=== INICIANDO PROCESSAMENTO DE EMBEDDINGS (MODO OFFLINE) ===", flush = True)
     
     print("Carregando modelo de IA...", flush=True)
     model = get_model()
@@ -117,16 +117,16 @@ def main():
     arquivos_json = glob.glob(padrao_busca)
 
     if not arquivos_json:
-        print(f"Erro: Nenhum arquivo JSON encontrado em {config.PASTA_DADOS}")
+        print(f"Erro: Nenhum arquivo JSON encontrado em {config.PASTA_DADOS}", flush = True)
         return
 
-    print(f"Encontrados {len(arquivos_json)} arquivo(s). Iniciando loop...")
+    print(f"Encontrados {len(arquivos_json)} arquivo(s). Iniciando loop...", flush = True)
 
     for arquivo_json in arquivos_json:
         # Chama a função principal sem os parâmetros de UI (pbar=None, status_text=None)
         gerar_embeddings_para_legislatura(model, arquivo_json)
 
-    print("\n✅ Todos os arquivos foram processados e indexados!")
+    print("\n✅ Todos os arquivos foram processados e indexados!", flush = True)
 
 if __name__ == "__main__":
     main()
