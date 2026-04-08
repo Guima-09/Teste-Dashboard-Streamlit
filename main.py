@@ -4,8 +4,9 @@ import dashboard
 import os
 import glob
 import config
-# Importamos as funções diretamente do seu embeddings.py
-from embeddings import get_model, gerar_embeddings_para_legislatura 
+
+from embeddings import get_model, gerar_embeddings_para_legislatura
+import coletor_camara2 
 
 st.set_page_config(page_title="Dashboard OASIS", layout="wide")
 st.title("🏛️ Dashboard dos Projetos de Lei - IA OASIS")
@@ -49,13 +50,13 @@ with tab_pesquisa:
             st.session_state.ia_concluida = True
         
     st.markdown("---")
-    
+
     if st.session_state.ia_concluida:
         dashboard.rodar_dashboard()
 
 with tab_bd:
     st.subheader(":red[AVISO: Atualização da base de dados com projetos recentes.]")
-    st.info("Duração estimada: ~1 hora. Mantenha esta aba aberta.")
+    st.info("Duração estimada: ~1 hora. Mantenha esta aba aberta para acompanhar o progresso.")
     
     # Botão que desabilita a si mesmo enquanto roda
     if st.button("Iniciar Atualização", type="primary", disabled=st.session_state.atualizando_db):
@@ -66,17 +67,23 @@ with tab_bd:
         barra_progresso = st.progress(0)
         
         try:
-            status_info.write("⏳ Inicializando modelo de IA (isso pode levar um minuto)...")
+            # --- ETAPA 1: COLETA (API -> JSON) ---
+            status_info.warning("📡 Conectando à API da Câmara... Buscando novas proposições.")
+            # Nota: Como o coletor usa prints, eles aparecerão apenas no console do Streamlit Cloud.
+            coletor_camara2.executar_coleta_incremental()
+            
+            # --- ETAPA 2: VETORIZAÇÃO (JSON -> PKL) ---
+            status_info.info("⏳ Inicializando modelo de IA (carregando tensores)...")
             model = get_model()
             
             padrao_busca = os.path.join(config.PASTA_DADOS, "camara_db_leg*.json")
             arquivos_json = glob.glob(padrao_busca)
             
             if not arquivos_json:
-                st.error("Nenhum arquivo JSON encontrado em " + config.PASTA_DADOS)
+                st.error(f"Nenhum arquivo JSON encontrado em {config.PASTA_DADOS}")
             else:
                 for arquivo in arquivos_json:
-                    # Chama a função do embeddings.py injetando a barra de progresso
+                    # A função agora tem acesso à pbar e status_info para atualizar a UI
                     gerar_embeddings_para_legislatura(
                         model, 
                         arquivo, 
@@ -84,13 +91,14 @@ with tab_bd:
                         status_text=status_info
                     )
                 
-                st.success("✅ Processo finalizado com sucesso!")
+                st.success("✅ Atualização TOTAL finalizada com sucesso!")
                 st.balloons()
         
         except Exception as e:
-            st.error(f"Erro crítico durante a atualização: {e}")
+            st.error(f"❌ Erro crítico durante a atualização: {e}")
         
         finally:
+            # Libera o estado e limpa a barra
             st.session_state.atualizando_db = False
-            # O rerun garante que o estado dos botões 'disabled' seja atualizado
+            time.sleep(3) # Pausa curta para o usuário ler a mensagem de sucesso
             st.rerun()
