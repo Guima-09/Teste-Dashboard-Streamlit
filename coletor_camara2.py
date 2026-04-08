@@ -178,7 +178,7 @@ def executar_coleta_incremental():
     else:
         print(f"\n[CACHE] Primeira execução. Coleta completa a partir de {data_inicio_busca.strftime('%d/%m/%Y')}.")
 
-    ids = obter_lista_ids(CAMARA_BASE_URL, data_inicio_busca, hoje, TIPOS_DOCUMENTO, flush = True)
+    ids = obter_lista_ids(CAMARA_BASE_URL, data_inicio_busca, hoje, TIPOS_DOCUMENTO)
     
     if ids: 
         novos_dados_separados = obter_detalhes_e_separar(ids)
