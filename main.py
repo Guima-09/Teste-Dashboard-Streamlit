@@ -4,6 +4,7 @@ import dashboard
 import os
 import glob
 import config
+import time
 
 from embeddings import get_model, gerar_embeddings_para_legislatura
 import coletor_camara2 
