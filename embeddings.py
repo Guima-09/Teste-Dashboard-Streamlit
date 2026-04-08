@@ -41,7 +41,7 @@ def gerar_embeddings_para_legislatura(model, arquivo_json, pbar=None, status_tex
     print(f"\n{msg}", flush=True)
 
     # Carregamento dos dados originais
-    with open(arquivo_json, 'r', encoding='utf-8') as f:
+    with open(arquivo_json, 'r', encoding='utf-8') as f: 
         dados = json.load(f)
 
     # Limpeza das ementas antes da vetorização
@@ -95,10 +95,27 @@ def gerar_embeddings_para_legislatura(model, arquivo_json, pbar=None, status_tex
 # ==========================================================
 def get_or_create_embeddings(dados, sufixo_leg, model):
     """
-    Mantém a compatibilidade com scripts que ainda usam o nome antigo.
+    Garante que o retorno seja SEMPRE o tensor de embeddings,
+    seja carregando do cache ou gerando um novo.
     """
-    # Esta função chama a nossa nova lógica, mas sem a barra de progresso do Streamlit
-    return gerar_embeddings_para_legislatura(model, f"camara_db_{sufixo_leg}.json")
+    arquivo_cache = os.path.join(config.PASTA_DADOS, f"cache_ementas_{sufixo_leg}.pkl")
+    caminho_json = os.path.join(config.PASTA_DADOS, f"camara_db_{sufixo_leg}.json")
+
+    # 1. Se o arquivo já existe, abre e retorna o tensor
+    if os.path.exists(arquivo_cache):
+        with open(arquivo_cache, 'rb') as f:
+            embeddings = pickle.load(f)
+            # Garante que seja float logo aqui
+            return embeddings.float() if hasattr(embeddings, 'float') else embeddings
+
+    # 2. Se não existe, gera, salva e DEPOIS retorna o tensor
+    # (Note que aqui chamamos a função de geração)
+    gerar_embeddings_para_legislatura(model, caminho_json)
+    
+    # Após gerar, precisamos ler o que foi salvo para retornar o objeto
+    with open(arquivo_cache, 'rb') as f:
+        embeddings = pickle.load(f)
+        return embeddings.float()
 
 # ==========================================================
 # 3. Lógica Main (Execução via Terminal)
